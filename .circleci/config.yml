@@ -12,14 +12,11 @@ jobs:
       - checkout
       - heroku/install
       - run:
-          name: Set up Heroku
-          command: |
-            echo $HEROKU_API_KEY | base64 --decode > ~/.netrc
-            heroku git:remote -a strangeback
-      - run:
           name: Deploy to Heroku
-          command: git push heroku main
-
+          command: |
+            heroku login -i
+            heroku git:remote -a strangeback
+            git push heroku main
 
 workflows:
   version: 2
