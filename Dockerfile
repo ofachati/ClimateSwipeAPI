@@ -1,20 +1,20 @@
-# Use an official Node.js runtime as a parent image
-FROM node:18.18.0
+# Use an official Python runtime as a parent image
+FROM python:3.9
 
 # Set the working directory
 WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json to the working directory
-COPY Frontend/package*.json ./
+# Copy the requirements file into the container
+COPY Backend/requirements.txt .
 
-# Install Angular dependencies
-RUN npm install
+# Install any needed packages specified in requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the content of the local Frontend directory to the working directory
-COPY Frontend/ .
+# Copy the content of the local Backend directory to the working directory
+COPY Backend/ .
 
-# Expose port 4200
-EXPOSE 4200
+# Expose port 8000
+EXPOSE 8000
 
-# Command to run the Angular application
-CMD ["npm", "start"]
+# Command to run the FastAPI application
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
