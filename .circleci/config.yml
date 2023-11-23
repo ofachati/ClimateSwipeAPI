@@ -5,6 +5,14 @@ orbs:
   heroku: circleci/heroku@2.0.0
 
 jobs:
+  build-and-test:
+    docker:
+      - image: cimg/python:3.9
+    steps:
+      - checkout
+      - python/install-packages:
+          pkg-manager: pip
+
   deploy-to-heroku:
     docker:
       - image: cimg/python:3.9
@@ -12,18 +20,15 @@ jobs:
       - checkout
       - heroku/install
       - run:
-          name: Debug Environment Variables
-          command: |
-            echo "HEROKU_API_KEY: $HEROKU_API_KEY"
-      - run:
           name: Deploy to Heroku
           command: |
-            heroku login -i
-            heroku git:remote -a strangeback
-            git push heroku main
+            git push https://heroku:$HEROKU_API_KEY@git.heroku.com/strangeback.git main
 
 workflows:
   version: 2
   build-and-deploy:
     jobs:
-      - deploy-to-heroku
+      - build-and-test
+      - deploy-to-heroku:
+          requires:
+            - build-and-test
