@@ -12,8 +12,9 @@ jobs:
       - checkout
       - heroku/install
       - run:
-            name: Debug HEROKU_API_KEY
-            command: echo $HEROKU_API_KEY
+          name: Debug Environment Variables
+          command: |
+            echo "HEROKU_API_KEY: $HEROKU_API_KEY"
       - run:
           name: Deploy to Heroku
           command: |
