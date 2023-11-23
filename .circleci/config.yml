@@ -1,0 +1,25 @@
+version: 2.1
+
+orbs:
+  python: circleci/python@1.5.0
+  heroku: circleci/heroku@2.0.0
+
+jobs:
+  deploy-to-heroku:
+    docker:
+      - image: cimg/python:3.10.2
+    steps:
+      - checkout
+      - heroku/install
+      - run:
+          name: Deploy to Heroku
+          command: |
+            heroku login -i
+            heroku git:remote -a strangeback
+            git push heroku main
+
+workflows:
+  version: 2
+  build-and-deploy:
+    jobs:
+      - deploy-to-heroku
