@@ -7,16 +7,19 @@ orbs:
 jobs:
   deploy-to-heroku:
     docker:
-      - image: cimg/python:3.10.2
+      - image: cimg/python:3.9
     steps:
       - checkout
       - heroku/install
       - run:
-          name: Deploy to Heroku
+          name: Set up Heroku
           command: |
-            heroku login -i
+            echo $HEROKU_API_KEY | base64 --decode > ~/.netrc
             heroku git:remote -a strangeback
-            git push heroku main
+      - run:
+          name: Deploy to Heroku
+          command: git push heroku main
+
 
 workflows:
   version: 2
