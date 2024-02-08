@@ -50,5 +50,13 @@ uvicorn==0.23.2
     # via -r requirements.in
 
 python-decouple==3.6
-scikit-learn==1.0.2
-pyspellchecker==0.6.2
+scikit_learn==1.4.0
+pyspellchecker==0.8.1
+#fastapi==0.109.2
+#motor==3.3.1
+#pydantic==2.6.1
+#pymongo==4.5.0
+
+#python-decouple==3.8
+
+#uvicorn==0.27.0.post1
