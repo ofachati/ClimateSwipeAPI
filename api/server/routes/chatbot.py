@@ -6,17 +6,23 @@ import json
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from spellchecker import SpellChecker
+import os
 
-# Function to read JSONL file
+
 def read_jsonl_file(filename):
-    data = []
-    with open(filename, 'r') as file:
-        for line in file:
-            data.append(json.loads(line))
-    return data
+  # Get the directory path of the current script
+  current_dir = os.path.dirname(os.path.abspath(__file__))
+  # Combine the directory path with the filename
+  filepath = os.path.join(current_dir, filename)
+  # Read the JSONL file
+  with open(filepath, 'r') as f:
+    data = [json.loads(line) for line in f]
+  return data
 
-# Load the data
+
+# Usage:
 data = read_jsonl_file('claims.jsonl')
+
 
 # Extract claims for vectorization
 claims = [item["claim"] for item in data]
