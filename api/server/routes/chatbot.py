@@ -69,7 +69,6 @@ spell = SpellChecker()
 class ChatMessage(BaseModel):
   message: str
 
-
 @router.post("/")
 async def chat_with_bot(user_message: ChatMessage):
     try:
@@ -77,12 +76,27 @@ async def chat_with_bot(user_message: ChatMessage):
         closest_evidence, wikipedia_url = find_closest_evidence(corrected_message)
 
         if closest_evidence is None:  # Check if no evidence meets the threshold
-            return {"message": "Sorry, I couldn't find any information related to your query. 😔"}
+            # Adjusted response for no relevant evidence found
+            return {
+                "message": "Sorry, I couldn't find any information related to your query. 😔",
+                "source_name": None,
+                "source_link": None
+            }
 
-        hyperlink = f'<br><a href="{wikipedia_url}" target="_blank">Read more on Wikipedia</a>'
+        # Use the evidence ID as the source name
+        evidence_id = evidences[np.argmax(index[dictionary.doc2bow(corrected_message.split())])][3]
+        article_name = evidence_id.split(":")[0].replace(" ", "_")
+
+        # Construct and return the response object
         return {
-          "message": f"{closest_evidence} {hyperlink}"
+            "message": closest_evidence,
+            "source_name": evidence_id,
+            "source_link": wikipedia_url
         }
     except Exception as e:
-        return {"message": "Sorry, I am still a simple AI.. I am not capable of answering this question. 😔"}
-
+        # Adjusted catch-all response to match the new object structure
+        return {
+            "message": "Sorry, I am still a simple AI.. I am not capable of answering this question 😔.",
+            "source_name": None,
+            "source_link": None
+        }
