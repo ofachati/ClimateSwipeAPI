@@ -1,71 +1,65 @@
-# routes/chatbot.py
-
 from fastapi import APIRouter
 from pydantic import BaseModel
 import json
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
+from gensim import corpora, models, similarities
 from spellchecker import SpellChecker
 import os
 
-
 def read_jsonl_file(filename):
-  # Get the directory path of the current script
-  current_dir = os.path.dirname(os.path.abspath(__file__))
-  # Combine the directory path with the filename
-  filepath = os.path.join(current_dir, filename)
-  # Read the JSONL file
-  with open(filepath, 'r') as f:
-    data = [json.loads(line) for line in f]
-  return data
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    filepath = os.path.join(current_dir, filename)
+    with open(filepath, 'r') as f:
+        data = [json.loads(line) for line in f]
+    return data
 
-
-# Usage:
 data = read_jsonl_file('claims.jsonl')
 
+# Flatten the data to extract all evidences
+evidences = []
+for item in data:
+    for evidence in item["evidences"]:
+        evidences.append((evidence["evidence"], evidence["evidence_label"], evidence["article"], evidence["evidence_id"]))
 
-# Extract claims for vectorization
-claims = [item["claim"] for item in data]
+# Extract evidence texts for vectorization
+evidence_texts = [evidence[0] for evidence in evidences]
 
-# Initialize and fit TF-IDF vectorizer
+# Initialize and fit TF-IDF vectorizer to evidences
 vectorizer = TfidfVectorizer()
-tfidf_matrix = vectorizer.fit_transform(claims)
+tfidf_matrix = vectorizer.fit_transform(evidence_texts)
 
-# Function to find the cl  bbosest claim
-def find_closest_claim(user_input):
-  # Vectorize the user input
-  user_vec = vectorizer.transform([user_input])
+# Convert evidences to a list of tokenized words
+evidence_tokenized = [evidence.split() for evidence in evidence_texts]
 
-  # Calculate cosine similarity
-  cos_similarity = cosine_similarity(user_vec, tfidf_matrix)
+# Build the dictionary and corpus for evidences
+dictionary = corpora.Dictionary(evidence_tokenized)
+corpus = [dictionary.doc2bow(evidence) for evidence in evidence_tokenized]
 
-  # Find the index of the highest similarity score
-  closest_index = cos_similarity.argmax()
+# Build the TF-IDF model for evidences
+tfidf_model = models.TfidfModel(corpus)
 
-  # Retrieve the corresponding claim and its label
-  closest_claim = data[closest_index]["claim"]
-  closest_label = data[closest_index]["claim_label"]
+# Compute TF-IDF matrix for the entire corpus of evidences
+corpus_tfidf = tfidf_model[corpus]
 
-  evidence_sentences = []
-  source_references = []
-  for evidence in data[closest_index]['evidences']:
-    #if evidence['evidence_label'] == "SUPPORTS":
-      evidence_sentences.append(evidence['evidence'])
-      source_references.append(f"{evidence['article']}:{evidence['evidence_id'].split(':')[1]}")
+# Build the index for soft cosine similarity for evidences
+index = similarities.SparseMatrixSimilarity(corpus_tfidf, num_features=len(dictionary))
 
-    # Joining the sentences and sources
-  evidences_str = "\n".join(evidence_sentences)
-  sources_str = ", ".join(source_references)
 
-  # Concatenating the final string with evidences followed by the sources
-  final_str = f"{evidences_str}\nSources: {sources_str}"
-  #closest_evidence = data[closest_index]["evidence"]
-  return closest_claim, closest_label,final_str
+def find_closest_evidence(user_input, similarity_threshold=0.1):  # Example threshold
+  user_vec_bow = dictionary.doc2bow(user_input.split())
+  user_vec_tfidf = tfidf_model[user_vec_bow]
+  soft_cos_similarity = index[user_vec_tfidf]
+  max_similarity = np.max(soft_cos_similarity)
 
-# Example user input
-#user_input = "Are polar bears increasing in number?"
-#closest_claim, closest_label = find_closest_claim(user_input)
-#print(f"Closest Match: {closest_claim}\nLabel: {closest_label}\n ")
+  if max_similarity < similarity_threshold:
+    return None, None  # Indicate no close evidence found
+
+  closest_index = np.argmax(soft_cos_similarity)
+  closest_evidence, _, _, evidence_id = evidences[closest_index]
+  article_name = evidence_id.split(":")[0].replace(" ", "_")
+  wikipedia_url = f"https://en.wikipedia.org/wiki/{article_name}"
+  return closest_evidence, wikipedia_url
 
 
 router = APIRouter()
@@ -73,19 +67,22 @@ spell = SpellChecker()
 
 
 class ChatMessage(BaseModel):
-    message: str
+  message: str
+
 
 @router.post("/")
 async def chat_with_bot(user_message: ChatMessage):
     try:
-        # Correct spelling
         corrected_message = " ".join([spell.correction(word) for word in user_message.message.split()])
-        # Now use the corrected message to find the closest claim
-        closest_claim, closest_label ,evidences= find_closest_claim(corrected_message)
-        print(f"Corrected User Message: {corrected_message}")
-        print(f"Closest Match: {closest_claim}\nLabel: {closest_label}\n")
-        return {"message": f"{evidences}"}
+        closest_evidence, wikipedia_url = find_closest_evidence(corrected_message)
+
+        if closest_evidence is None:  # Check if no evidence meets the threshold
+            return {"message": "Sorry, I couldn't find any information related to your query. 😔"}
+
+        hyperlink = f'<br><a href="{wikipedia_url}" target="_blank">Read more on Wikipedia</a>'
+        return {
+          "message": f"{closest_evidence} {hyperlink}"
+        }
     except Exception as e:
-        print(f"An error occurred: {e}")
-        # Return a custom error message
-        return {"message": "I am not capable of answering this question right now."}
+        return {"message": "Sorry, I am still a simple AI.. I am not capable of answering this question. 😔"}
+
