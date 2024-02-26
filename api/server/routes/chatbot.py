@@ -7,6 +7,7 @@ from gensim import corpora, models, similarities
 from spellchecker import SpellChecker
 import os
 
+
 def read_jsonl_file(filename):
     current_dir = os.path.dirname(os.path.abspath(__file__))
     filepath = os.path.join(current_dir, filename)
@@ -96,7 +97,7 @@ async def chat_with_bot(user_message: ChatMessage):
     except Exception as e:
         # Adjusted catch-all response to match the new object structure
         return {
-            "message": "Sorry, I am still a simple AI.. I am not capable of answering this question 😔.",
+            "message": "Sorry, Something wrong happend.. I am not capable of answering this query 😔.",
             "source_name": None,
             "source_link": None
         }

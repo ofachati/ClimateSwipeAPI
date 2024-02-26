@@ -8,7 +8,10 @@ app = FastAPI()
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://itwi.me"],  # Adjust this to your Angular application URL
+    allow_origins=[
+        "https://itwi.me",  # Non-www version
+        "https://www.itwi.me"  # www version
+    ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
